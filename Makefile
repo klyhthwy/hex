@@ -9,24 +9,23 @@ CP := cp -v
 CFLAGS := -c -Wall
 LDFLAGS := 
 
+BUILD_DIR := build
+RELEASE_DIR := /usr/local/bin
+OUTPUT_BIN := hex
+
 INCLUDE_PATH := 
 
-SOURCE_FILES += hex.cpp
-
-BUILD_DIR := build
-RELEASE_DIR := /usr/bin
-OUTPUT_BIN := hex
+SOURCE_FILES := hex.cpp
 
 SOURCE_OBJECTS := $(addprefix $(BUILD_DIR)/, $(SOURCE_FILES:.cpp=.o) )
 
-all: clean release
+all: release
 
 debug: CFLAGS += -DDEBUG -g -O0
 debug: clean $(BUILD_DIR)/$(OUTPUT_BIN)
 
 release: CFLAGS += -DNDEBUG -O3
-release: $(BUILD_DIR)/$(OUTPUT_BIN)
-release:
+release: clean $(BUILD_DIR)/$(OUTPUT_BIN)
 	sudo $(CP) $(BUILD_DIR)/$(OUTPUT_BIN) $(RELEASE_DIR)/$(OUTPUT_BIN)
 
 $(BUILD_DIR):
