@@ -70,12 +70,8 @@ int main( int argc, char **argv )
 
 char display_txt( unsigned char chr )
 {
-    if( chr > 0x0D )
+    if( chr > 0x20 && chr < 0x7F )
         return (char)chr;
-    else if( chr == 0x0A )
-        return 0x19;
-    else if( chr == 0x0D )
-        return 0x11;
     else
         return 0x20;
 }
