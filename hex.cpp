@@ -84,8 +84,12 @@ int main(int argc, const char **argv)
                 fio.open(argv[1], ios::in | ios::out | ios::binary);
                 if(fio.fail())
                 {
-                    display_file_fail(argv[1]);
-                    return 0;
+                    fio.open(argv[1], ios::in | ios::out | ios::trunc | ios::binary);
+                    if(fio.fail())
+                    {
+                        display_file_fail(argv[1]);
+                        return 0;
+                    }
                 }
                 sscanf(argv[3], "%x", &addr);
                 fio.seekp(addr, ios::beg);
