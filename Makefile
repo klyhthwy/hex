@@ -1,30 +1,22 @@
-CCPATH := /usr/gcc-5.1.0/bin
-CCBIN := g++-5.1.0
-
-CC := $(CCPATH)/$(CCBIN)
+CC := clang++
 RM := rm -rf
 MK := mkdir
 CP := cp -v
 
-CFLAGS := -c -Wall
-LDFLAGS := 
-
-BUILD_DIR := build
+BUILD_DIR := _build
 RELEASE_DIR := /usr/local/bin
 OUTPUT_BIN := hex
 
-INCLUDE_PATH := 
-
 SOURCE_FILES := hex.cpp
 
-SOURCE_OBJECTS := $(addprefix $(BUILD_DIR)/, $(SOURCE_FILES:.cpp=.o) )
+FLAGS := -Weverything -Wno-format-nonliteral -Wno-padded
 
 all: release
 
-debug: CFLAGS += -DDEBUG -g -O0
+debug: FLAGS += -DDEBUG -g -O0
 debug: clean $(BUILD_DIR)/$(OUTPUT_BIN)
 
-release: CFLAGS += -DNDEBUG -O3
+release: FLAGS += -DNDEBUG -O3
 release: clean $(BUILD_DIR)/$(OUTPUT_BIN)
 
 .PHONY: install
@@ -34,12 +26,8 @@ install: $(BUILD_DIR)/$(OUTPUT_BIN)
 $(BUILD_DIR):
 	$(MK) $@
 
-$(BUILD_DIR)/%.o: %.cpp
-	$(CC) $(CFLAGS) $(INCLUDE_PATH) -M $< -MF $(@:.o=.d) -MT $@
-	$(CC) $(CFLAGS) $(INCLUDE_PATH) -c -o $@ $<
-
-$(BUILD_DIR)/$(OUTPUT_BIN): $(BUILD_DIR) $(SOURCE_OBJECTS)
-	$(CC) $(LDFLAGS) $(SOURCE_OBJECTS) -o $@
+$(BUILD_DIR)/$(OUTPUT_BIN): $(BUILD_DIR) $(SOURCE_FILES)
+	$(CC) $(FLAGS) $(SOURCE_FILES) -o $@
 
 .PHONY: clean
 clean:
