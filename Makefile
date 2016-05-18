@@ -21,7 +21,7 @@ release: clean $(BUILD_DIR)/$(OUTPUT_BIN)
 
 .PHONY: install
 install: $(BUILD_DIR)/$(OUTPUT_BIN)
-	sudo $(CP) $(BUILD_DIR)/$(OUTPUT_BIN) $(RELEASE_DIR)/$(OUTPUT_BIN)
+	$(CP) $(BUILD_DIR)/$(OUTPUT_BIN) $(RELEASE_DIR)/$(OUTPUT_BIN)
 
 $(BUILD_DIR):
 	$(MK) $@
