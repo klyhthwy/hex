@@ -33,19 +33,21 @@ public:
     format_e get_format(void);
     action_e get_action(void);
     address_t get_address(void);
-    uint8_t get_set_data(void);
+    address_t get_display_size(void);
     int get_data_size(void);
     const char * get_data(void);
 
 private:
 
+    void parse_file_size(void);
+    void parse_addr_size(int, const char **);
     void parse_data(int, const char **);
 
     string filename;
     format_e format;
     action_e action;
     address_t address;
-    uint8_t set_data;
+    address_t display_size;
     int data_size;
     uint8_t *data;
 };
@@ -73,7 +75,7 @@ private:
 void display_file_fail(const char *);
 char display_txt(unsigned char);
 void display_usage(void);
-void output_file(fstream &, const char *, address_t);
+void output_file(fstream &fin, const char *base, address_t address, address_t size);
 void output_head();
 void print_binary(unsigned char);
 
@@ -83,13 +85,11 @@ int main(int argc, const char **argv)
     fstream fio;
     string base("      %02X ");
 
-    if(argc < 2)
+    if(!args.parse(argc, argv))
     {
         display_usage();
-        return 0;
+        return 1;
     }
-
-    args.parse(argc, argv);
     switch(args.get_action())
     {
         case arg_data::READ:
@@ -102,7 +102,6 @@ int main(int argc, const char **argv)
             switch(args.get_format())
             {
                 case arg_data::HEX:
-                    base = "      %02X ";
                     break;
                 case arg_data::DECIMAL:
                     base = "%8u ";
@@ -116,6 +115,7 @@ int main(int argc, const char **argv)
             }
             break;
         case arg_data::WRITE:
+        case arg_data::SET:
             fio.open(args.get_filename(), ios::in | ios::out | ios::binary);
             if(fio.fail())
             {
@@ -130,18 +130,6 @@ int main(int argc, const char **argv)
             fio.write(args.get_data(), args.get_data_size());
             fio.seekg(ios::beg);
             break;
-        case arg_data::SET:
-            fio.open(args.get_filename(), ios::in | ios::out | ios::binary);
-            if(fio.fail())
-            {
-                fio.open(args.get_filename(), ios::in | ios::out | ios::trunc | ios::binary);
-                if(fio.fail())
-                {
-                    display_file_fail(args.get_filename());
-                    return 1;
-                }
-            }
-            break;
         case arg_data::APPEND:
             fio.open(args.get_filename(), ios::in | ios::out | ios::app | ios::binary);
             if(fio.fail())
@@ -154,7 +142,7 @@ int main(int argc, const char **argv)
             break;
     }
 
-    output_file(fio, base.c_str(), args.get_address());
+    output_file(fio, base.c_str(), args.get_address(), args.get_display_size());
     fio.close();
 
     return 0;
@@ -189,20 +177,19 @@ void display_usage(void)
          << "      -d        Display data in decimal format.\n"
          << "      -o        Display data in octal format.\n"
          << "      -b        Display data in binary format.\n"
-         << "                Usage: hex <input_file> [-<format_flag] [<start_address>]\n"
+         << "                Usage: hex <input_file> [-<format_flag] [<start_address>] [<size>]\n"
          << "      -w        Write data to file. Currently only hex format is supported for data and addresses.\n"
          << "                Usage: hex <input_file> -w <start_address> <data_1> <data_2> ... <data_n>\n"
          << "      -a        Append data to file. Currently only hex format is supported for data and addresses.\n"
          << "                Usage: hex <input_file> -a <data_1> <data_2> ... <data_n>\n"
          << "      -s        Set data in file. Currently only hex format is supported for data and addresses.\n"
-         << "                Usage: hex <input_file> -s <start_address> <size> <data>\n\n";
+         << "                Usage: hex <input_file> -s <start_address> <data> <size>\n\n";
 }
 
-void output_file(fstream &fin, const char *base, address_t address)
+void output_file(fstream &fin, const char *base, address_t address, address_t size)
 {
-    const int MAX_SIZE = 0x200;
-    address_t end = address + MAX_SIZE;
     char_queue queue;
+    address_t end = address + size;
 
     if(!fin.is_open())
     {
@@ -290,7 +277,7 @@ void print_binary(unsigned char buf)
 
 
 arg_data::arg_data(void) :
-        filename(), format(HEX), action(READ), address(0), set_data(0), data_size(0), data(NULL)
+        filename(), format(HEX), action(READ), address(0), display_size(0), data_size(0), data(NULL)
 {
 }
 
@@ -312,6 +299,7 @@ bool arg_data::parse(int argc, const char **argv)
     }
 
     filename = argv[1];
+    parse_file_size();
     if(argc > 2)
     {
         if(argv[2][0] == '-')
@@ -322,21 +310,41 @@ bool arg_data::parse(int argc, const char **argv)
                 case 'x':
                 default:
                     format = HEX;
+                    if(argc > 3)
+                    {
+                        parse_addr_size(argc - 3, &argv[3]);
+                    }
                     break;
                 case 'd':
                     format = DECIMAL;
+                    if(argc > 3)
+                    {
+                        parse_addr_size(argc - 3, &argv[3]);
+                    }
                     break;
                 case 'o':
                     format = OCTAL;
+                    if(argc > 3)
+                    {
+                        parse_addr_size(argc - 3, &argv[3]);
+                    }
                     break;
                 case 'b':
                     format = BINARY;
+                    if(argc > 3)
+                    {
+                        parse_addr_size(argc - 3, &argv[3]);
+                    }
                     break;
                 case 'a':
                     if(argc > 3)
                     {
                         action = APPEND;
                         parse_data(argc-3, &argv[3]);
+                    }
+                    else
+                    {
+                        return false;
                     }
                     break;
                 case 's':
@@ -345,9 +353,14 @@ bool arg_data::parse(int argc, const char **argv)
                         action = SET;
                         sscanf(argv[3], "%x", &temp);
                         address = temp;
-                        sscanf(argv[4], "%x", &data_size);
-                        sscanf(argv[5], "%x", &temp);
-                        set_data = temp & 0xFF;
+                        sscanf(argv[4], "%x", &temp);
+                        sscanf(argv[5], "%x", &data_size);
+                        data = new uint8_t[data_size];
+                        memset(data, static_cast<int>(temp), static_cast<size_t>(data_size));
+                    }
+                    else
+                    {
+                        return false;
                     }
                     break;
                 case 'w':
@@ -358,13 +371,16 @@ bool arg_data::parse(int argc, const char **argv)
                         address = temp;
                         parse_data(argc-4, &argv[4]);
                     }
+                    else
+                    {
+                        return false;
+                    }
                     break;
             }
         }
         else
         {
-            sscanf(argv[2], "%x", &temp);
-            address = temp;
+            parse_addr_size(argc - 2, &argv[2]);
         }
     }
 
@@ -391,6 +407,11 @@ address_t arg_data::get_address(void)
     return address;
 }
 
+address_t arg_data::get_display_size(void)
+{
+    return display_size;
+}
+
 int arg_data::get_data_size(void)
 {
     return data_size;
@@ -401,6 +422,35 @@ const char * arg_data::get_data(void)
     return reinterpret_cast<const char *>(data);
 }
 
+void arg_data::parse_file_size(void)
+{
+    fstream fio(filename.c_str(), ios::in);
+    if(fio.fail())
+    {
+        display_size = 0;
+    }
+    else
+    {
+        fio.close();
+        fio.open(filename.c_str(), ios::app);
+        display_size = static_cast<address_t>(fio.tellp());
+        fio.close();
+    }
+}
+
+void arg_data::parse_addr_size(int argc, const char **argv)
+{
+    unsigned int temp;
+
+    sscanf(argv[0], "%x", &temp);
+    address = temp;
+    if(argc > 1)
+    {
+        sscanf(argv[1], "%x", &temp);
+        display_size = temp;
+    }
+}
+
 void arg_data::parse_data(int size, const char **raw_data)
 {
     unsigned int temp;
@@ -408,6 +458,7 @@ void arg_data::parse_data(int size, const char **raw_data)
     if(size > 0)
     {
         data_size = size;
+        display_size += static_cast<address_t>(size);
         data = new uint8_t[size];
         for(int i=0; i<size; i++)
         {
