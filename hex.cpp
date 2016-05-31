@@ -34,7 +34,7 @@ public:
     action_e get_action(void);
     address_t get_address(void);
     address_t get_display_size(void);
-    int get_data_size(void);
+    address_t get_data_size(void);
     const char * get_data(void);
 
 private:
@@ -48,7 +48,7 @@ private:
     action_e action;
     address_t address;
     address_t display_size;
-    int data_size;
+    address_t data_size;
     uint8_t *data;
 };
 
@@ -142,7 +142,7 @@ int main(int argc, const char **argv)
             break;
     }
 
-    output_file(fio, base.c_str(), args.get_address(), args.get_display_size());
+    output_file(fio, base.c_str(), 0, args.get_display_size());
     fio.close();
 
     return 0;
@@ -340,7 +340,7 @@ bool arg_data::parse(int argc, const char **argv)
                     if(argc > 3)
                     {
                         action = APPEND;
-                        parse_data(argc-3, &argv[3]);
+                        parse_data(argc - 3, &argv[3]);
                     }
                     else
                     {
@@ -369,7 +369,7 @@ bool arg_data::parse(int argc, const char **argv)
                         action = WRITE;
                         sscanf(argv[3], "%x", &temp);
                         address = temp;
-                        parse_data(argc-4, &argv[4]);
+                        parse_data(argc - 4, &argv[4]);
                     }
                     else
                     {
@@ -412,7 +412,7 @@ address_t arg_data::get_display_size(void)
     return display_size;
 }
 
-int arg_data::get_data_size(void)
+address_t arg_data::get_data_size(void)
 {
     return data_size;
 }
@@ -447,7 +447,7 @@ void arg_data::parse_addr_size(int argc, const char **argv)
     if(argc > 1)
     {
         sscanf(argv[1], "%x", &temp);
-        display_size = temp;
+//        display_size = temp;
     }
 }
 
@@ -457,8 +457,8 @@ void arg_data::parse_data(int size, const char **raw_data)
 
     if(size > 0)
     {
-        data_size = size;
-        display_size += static_cast<address_t>(size);
+        data_size = static_cast<address_t>(size);
+//        display_size += static_cast<address_t>(size);
         data = new uint8_t[size];
         for(int i=0; i<size; i++)
         {
