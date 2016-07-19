@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -75,15 +76,16 @@ private:
 void display_file_fail(const char *);
 char display_txt(unsigned char);
 void display_usage(void);
-void output_file(fstream &fin, const char *base, address_t address, address_t size);
-void output_head();
+void output_file(fstream &fin, const char *base, int field_width, address_t address, address_t size);
+void output_head(int field_width);
 void print_binary(unsigned char);
 
 int main(int argc, const char **argv)
 {
     arg_data args;
     fstream fio;
-    string base("      %02X ");
+    string base("%02X ");
+    int field_width = 2;
 
     if(!args.parse(argc, argv))
     {
@@ -102,14 +104,18 @@ int main(int argc, const char **argv)
             switch(args.get_format())
             {
                 case arg_data::HEX:
+                    field_width = 2;
                     break;
                 case arg_data::DECIMAL:
-                    base = "%8u ";
+                    field_width = 3;
+                    base = "%3u ";
                     break;
                 case arg_data::OCTAL:
-                    base = "     %03o ";
+                    field_width = 4;
+                    base = "%04o ";
                     break;
                 case arg_data::BINARY:
+                    field_width = 8;
                     base = "b";
                     break;
             }
@@ -142,7 +148,7 @@ int main(int argc, const char **argv)
             break;
     }
 
-    output_file(fio, base.c_str(), 0, args.get_display_size());
+    output_file(fio, base.c_str(), field_width, 0, args.get_display_size());
     fio.close();
 
     return 0;
@@ -186,7 +192,7 @@ void display_usage(void)
          << "                Usage: hex <input_file> -s <start_address> <data> <size>\n\n";
 }
 
-void output_file(fstream &fin, const char *base, address_t address, address_t size)
+void output_file(fstream &fin, const char *base, int field_width, address_t address, address_t size)
 {
     char_queue queue;
     address_t end = address + size;
@@ -199,7 +205,7 @@ void output_file(fstream &fin, const char *base, address_t address, address_t si
     address &= ~static_cast<address_t>(0x0F);
     fin.seekg(address, ios::beg);
 
-    output_head();
+    output_head(field_width);
     for(; true; address++)
     {
         unsigned char buf;
@@ -219,7 +225,7 @@ void output_file(fstream &fin, const char *base, address_t address, address_t si
             queue.push(' ');
             if(fin.eof())
             {
-                printf("   (EOF) ");
+                printf("(EOF) ");
             }
             else
             {
@@ -231,7 +237,7 @@ void output_file(fstream &fin, const char *base, address_t address, address_t si
                 printf("%*c ", 8, ' ');
             }
             queue.output();
-            output_head();
+            output_head(field_width);
             return;
         }
 
@@ -247,12 +253,12 @@ void output_file(fstream &fin, const char *base, address_t address, address_t si
     }
 }
 
-void output_head()
+void output_head(int field_width)
 {
     printf("\n\n     Hex:  ");
     for(int i = 0; i < 0x10; i++)
     {
-        printf("%8X ", i);
+        printf("%*X ", field_width, i);
     }
     printf("\n");
 }
