@@ -1,33 +1,42 @@
-CC := clang++
+CC := g++
 RM := rm -rf
 MK := mkdir
 CP := cp -v
 
 BUILD_DIR := _build
-RELEASE_DIR := /usr/local/bin
-OUTPUT_BIN := hex
+DEBUG_DIR := $(BUILD_DIR)/debug
+RELEASE_DIR := $(BUILD_DIR)/release
+INSTALL_DIR := /usr/local/bin
+OUTPUT_BIN := hex.exe
 
 SOURCE_FILES := hex.cpp
 
-FLAGS := -Weverything -Wno-format-nonliteral -Wno-padded
+FLAGS := -Wall
 
-all: release
+all: debug release
 
-debug: FLAGS += -DDEBUG -g -O0
-debug: clean $(BUILD_DIR)/$(OUTPUT_BIN)
+debug: $(DEBUG_DIR)/$(OUTPUT_BIN)
 
-release: FLAGS += -DNDEBUG -O3
-release: clean $(BUILD_DIR)/$(OUTPUT_BIN)
+release: $(RELEASE_DIR)/$(OUTPUT_BIN)
 
 .PHONY: install
-install: $(BUILD_DIR)/$(OUTPUT_BIN)
-	$(CP) $(BUILD_DIR)/$(OUTPUT_BIN) $(RELEASE_DIR)/$(OUTPUT_BIN)
+install: $(RELEASE_DIR)/$(OUTPUT_BIN)
+	$(CP) $(RELEASE_DIR)/$(OUTPUT_BIN) $(INSTALL_DIR)/$(OUTPUT_BIN)
 
 $(BUILD_DIR):
 	$(MK) $@
 
-$(BUILD_DIR)/$(OUTPUT_BIN): $(BUILD_DIR) $(SOURCE_FILES)
-	$(CC) $(FLAGS) $(SOURCE_FILES) -o $@
+$(DEBUG_DIR): $(BUILD_DIR)
+	$(MK) $@
+
+$(RELEASE_DIR): $(BUILD_DIR)
+	$(MK) $@
+
+$(DEBUG_DIR)/$(OUTPUT_BIN): $(DEBUG_DIR) $(SOURCE_FILES)
+	$(CC) $(FLAGS) -DDEBUG -g -O0 $(SOURCE_FILES) -o $@
+
+$(RELEASE_DIR)/$(OUTPUT_BIN): $(RELEASE_DIR) $(SOURCE_FILES)
+	$(CC) $(FLAGS) -DNDEBUG -O3 $(SOURCE_FILES) -o $@
 
 .PHONY: clean
 clean:
